@@ -1,0 +1,68 @@
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+
+train_path = "/content/drive/MyDrive/train"
+
+
+datagen = ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=15,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    validation_split=0.1
+)
+
+
+train_data = datagen.flow_from_directory(
+    train_path,
+    target_size=(224,224),
+    batch_size=32,
+    class_mode='categorical',
+    subset='training'
+)
+
+
+val_data = datagen.flow_from_directory(
+    train_path,
+    target_size=(224,224),
+    batch_size=32,
+    class_mode='categorical',
+    subset='validation'
+)
+
+
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224,224,3))
+base_model.trainable = False
+
+
+model = models.Sequential([
+    base_model,
+    layers.Flatten(),
+    layers.Dense(120, activation='relu'),
+    layers.Dense(2, activation='softmax')
+])
+
+
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=10
+)
+
+
+model.evaluate(val_data)
