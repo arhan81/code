@@ -1,0 +1,38 @@
+import numpy as np
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from tensorflow.keras import models, layers
+import matplotlib.pyplot as plt
+
+# Example dataset (replace this with your real data)
+X = np.random.rand(1000, 10)   # 1000 samples, 10 features
+Y = np.random.randint(0, 2, 1000)  # binary labels
+
+# Split data
+Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.2, random_state=42)
+
+# Model
+model = models.Sequential([
+    layers.Dense(64, activation="relu", input_shape=(Xtrain.shape[1],)),
+    layers.Dense(32, activation="relu"),
+    layers.Dense(16, activation="relu"),
+    layers.Dense(1, activation="sigmoid")
+])
+
+# Compile
+model.compile(
+    optimizer="adam",
+    loss="binary_crossentropy",
+    metrics=["accuracy"]
+)
+
+# Train
+history = model.fit(
+    Xtrain, Ytrain,
+    epochs=50,
+    validation_data=(Xtest, Ytest)
+)
+
+# Evaluate
+test_loss, test_acc = model.evaluate(Xtest, Ytest, verbose=2)
+print("Test Accuracy:", test_acc)
