@@ -1,0 +1,204 @@
+import matplotlib.pyplot as plt
+from mtcnn.mtcnn import MTCNN
+from PIL import Image
+from numpy import asarray
+import glob
+import cv2
+import os
+
+# Function to draw and save detected faces
+def draw_faces(filename, result_list):
+
+    # Read image
+    data = plt.imread(filename)
+
+    for i in range(len(result_list)):
+
+        # Get coordinates
+        x1, y1, width, height = result_list[i]['box']
+        x2, y2 = x1 + width, y1 + height
+
+        # Handle negative coordinates
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = max(0, x2)
+        y2 = max(0, y2)
+
+        # Crop face
+        face = data[y1:y2, x1:x2]
+
+        # Show face
+        plt.subplot(1, len(result_list), i + 1)
+        plt.axis('off')
+        plt.imshow(face)
+
+        # Save cropped face
+        save_name = f"face_{i}.jpg"
+        cv2.imwrite(save_name, cv2.cvtColor(face, cv2.COLOR_RGB2BGR))
+
+    plt.show()
+
+
+# Load all images
+path = glob.glob("FaceRecog/*.jpg")
+
+# Create detector once
+detector = MTCNN()
+
+for img in path:
+
+    filename = img
+
+    # Open image
+    image = Image.open(filename)
+    image = image.convert('RGB')
+
+    # Convert to array
+    pixels = asarray(image)
+
+    # Detect faces
+    faces = detector.deimport pandas as pd
+import tensorflow as tf
+from tensorflow.keras import models, layers, preprocessing
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications.vgg16 import VGG16
+from sklearn.model_selection import train_test_split
+import os
+
+# Read filenames
+file_names = os.listdir("FaceRecog")
+
+NameArray = []
+
+# Create labels
+for name in file_names:
+
+    category = name.split('.')[0]
+
+    if category == 'gourishankar':
+        NameArray.append('Gourishankar')
+
+    elif category == 'Aditya_Panchwagh':
+        NameArray.append("Aditya")
+
+    elif category == "Dhananjay_Jha":
+        NameArray.append("Dhananjay")
+
+    elif category == 'Habil_Bhagat':
+        NameArray.append("Habil")
+
+    elif category == "Karan_Mahajan":
+        NameArray.append("Karan")
+
+    elif category == 'Kartik_Jawanjal':
+        NameArray.append("Kartik")
+
+    elif category == "Krish_Shah":
+        NameArray.append("Krish")
+
+    elif category == 'Manas_Oswal':
+        NameArray.append("Manas")
+
+    elif category == "Mayank_Modi":
+        NameArray.append("Mayank")
+
+    elif category == 'Shubham_Pagare':
+        NameArray.append("Shubham")
+
+    elif category == "Vishal_Kasa":
+        NameArray.append("Kasa")
+
+# Create dataframe
+train = pd.DataFrame({
+    'filename': file_names,
+    'category': NameArray
+})
+
+# Split dataset
+train_df, validate_df = train_test_split(
+    train,
+    test_size=0.2,
+    random_state=0
+)
+
+train_df = train_df.reset_index(drop=True)
+validate_df = validate_df.reset_index(drop=True)
+
+# Data augmentation
+training = ImageDataGenerator(
+    rotation_range=5,
+    rescale=1./255,
+    shear_range=0.1,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    width_shift_range=0.1,
+    height_shift_range=0.1
+)
+
+trainingdata = training.flow_from_dataframe(
+    dataframe=train_df,
+    directory="FaceRecog",
+    x_col='filename',
+    y_col='category',
+    target_size=(224, 224),
+    class_mode='categorical',
+    batch_size=32
+)
+
+validation = ImageDataGenerator(rescale=1./255)
+
+validationdata = validation.flow_from_dataframe(
+    dataframe=validate_df,
+    directory="FaceRecog",
+    x_col='filename',
+    y_col='category',
+    target_size=(224, 224),
+    class_mode='categorical',
+    batch_size=32
+)
+
+# Load VGG16
+base = VGG16(
+    weights='imagenet',
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+
+# Freeze pretrained layers
+base.trainable = False
+
+# Build model
+model = models.Sequential([
+    base,
+    layers.Flatten(),
+    layers.Dense(400, activation='relu'),
+    layers.Dense(10, activation='softmax')
+])
+
+# Compile model
+model.compile(
+    optimizer="adam",
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Train model
+history = model.fit(
+    trainingdata,
+    validation_data=validationdata,
+    epochs=30
+)
+
+# Evaluate model
+loss, validation_acc = model.evaluate(validationdata, verbose=0)
+
+print("Validation Accuracy:", validation_acc)tect_faces(pixels)
+
+    print(f"Faces detected in {filename}: {len(faces)}")
+
+    # Draw and save faces
+    draw_faces(filename, faces)
+
+
+
+          
