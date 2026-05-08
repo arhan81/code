@@ -1,0 +1,124 @@
+# Install required library
+!pip install yfinance
+
+# Imports
+import numpy as np
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+
+# Style
+sns.set(style='whitegrid')
+plt.rcParams['figure.figsize'] = (14, 8)
+
+# -----------------------------
+# Step 1: Load Data (No CSV)
+# -----------------------------
+df = yf.download("BTC-USD", start="2015-01-01")
+df.reset_index(inplace=True)
+
+# Sort by date
+df = df.sort_values('Date')
+
+print(df.head())
+
+# -----------------------------
+# Step 2: Normalize Data
+# -----------------------------
+scaler = MinMaxScaler()
+
+close_price = df['Close'].values.reshape(-1, 1)
+scaled_close = scaler.fit_transform(close_price)
+
+# -----------------------------
+# Step 3: Create Sequences
+# -----------------------------
+SEQ_LEN = 100
+
+def to_sequences(data, seq_len):
+    X = []
+    for i in range(len(data) - seq_len):
+        X.append(data[i:i+seq_len])
+    return np.array(X)
+
+def preprocess(data, seq_len, split=0.85):
+    data_seq = to_sequences(data, seq_len)
+    train_size = int(len(data_seq) * split)
+
+    X_train = data_seq[:train_size, :-1]
+    y_train = data_seq[:train_size, -1]
+
+    X_test = data_seq[train_size:, :-1]
+    y_test = data_seq[train_size:, -1]
+
+    return X_train, y_train, X_test, y_test
+
+X_train, y_train, X_test, y_test = preprocess(scaled_close, SEQ_LEN)
+
+# -----------------------------
+# Step 4: Build LSTM Model
+# -----------------------------
+model = Sequential()
+
+model.add(LSTM(200, input_shape=(SEQ_LEN-1, 1)))
+model.add(Dropout(0.2))
+
+model.add(Dense(100))
+model.add(Dense(1))   # Regression → no sigmoid
+
+# Compile
+model.compile(loss='mean_squared_error', optimizer='adam')
+
+model.summary()
+
+# -----------------------------
+# Step 5: Train Model
+# -----------------------------
+history = model.fit(
+    X_train, y_train,
+    epochs=15,
+    batch_size=32,
+    shuffle=False,
+    validation_split=0.1
+)
+
+# -----------------------------
+# Step 6: Evaluate
+# -----------------------------
+model.evaluate(X_test, y_test)
+
+# -----------------------------
+# Step 7: Plot Loss
+# -----------------------------
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend(['Train', 'Validation'])
+plt.show()
+
+# -----------------------------
+# Step 8: Prediction
+# -----------------------------
+y_pred = model.predict(X_test)
+
+# Inverse scaling
+y_test_inv = scaler.inverse_transform(y_test)
+y_pred_inv = scaler.inverse_transform(y_pred)
+
+# -----------------------------
+# Step 9: Plot Results
+# -----------------------------
+plt.plot(y_test_inv, label="Actual Price", color='green')
+plt.plot(y_pred_inv, label="Predicted Price", color='red')
+plt.title('Bitcoin Price Prediction')
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
