@@ -1,0 +1,78 @@
+from keras.datasets import mnist
+from keras.layers import Input, Dense
+from keras.models import Model
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load dataset
+(X_train, _), (X_test, _) = mnist.load_data()
+
+# Normalize
+X_train = X_train.astype('float32') / 255.0
+X_test = X_test.astype('float32') / 255.0
+
+# Flatten images
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+
+print(X_train.shape)
+print(X_test.shape)
+
+# Input layer
+input_img = Input(shape=(784,))
+
+# Encoder
+encoded = Dense(32, activation='relu')(input_img)
+
+# Decoder
+decoded = Dense(784, activation='sigmoid')(encoded)
+
+# Autoencoder model
+autoencoder = Model(input_img, decoded)
+
+# Encoder model
+encoder = Model(input_img, encoded)
+
+# Compile
+autoencoder.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
+
+# Train
+autoencoder.fit(
+    X_train,
+    X_train,
+    epochs=50,
+    batch_size=256,
+    shuffle=True,
+    validation_data=(X_test, X_test)
+)
+
+# Predictions
+encoded_imgs = encoder.predict(X_test)
+predicted = autoencoder.predict(X_test)
+
+# Visualization
+plt.figure(figsize=(20, 6))
+
+for i in range(10):
+
+    # Original image
+    ax = plt.subplot(3, 10, i + 1)
+    plt.imshow(X_test[i].reshape(28, 28), cmap='gray')
+    plt.axis('off')
+
+    # Encoded representation
+    ax = plt.subplot(3, 10, i + 11)
+    plt.imshow(encoded_imgs[i].reshape(8, 4), cmap='gray')
+    plt.axis('off')
+
+    # Reconstructed image
+    ax = plt.subplot(3, 10, i + 21)
+    plt.imshow(predicted[i].reshape(28, 28), cmap='gray')
+    plt.axis('off')
+
+plt.show()
