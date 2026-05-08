@@ -1,0 +1,111 @@
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras import models, layers, preprocessing
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.model_selection import train_test_split
+import os
+
+# Read filenames
+file_names = os.listdir("/content/train")
+
+dogorcat = []
+
+# Create labels
+for name in file_names:
+
+    category = name.split('.')[0]
+
+    if category == 'dog':
+        dogorcat.append("DOG")
+    else:
+        dogorcat.append("CAT")
+
+# Create dataframe
+train = pd.DataFrame({
+    'filename': file_names,
+    'category': dogorcat
+})
+
+# Split dataset
+train_df, validate_df = train_test_split(
+    train,
+    test_size=0.1,
+    random_state=42
+)
+
+train_df = train_df.reset_index(drop=True)
+validate_df = validate_df.reset_index(drop=True)
+
+# Data augmentation
+training = ImageDataGenerator(
+    rotation_range=15,
+    rescale=1./255,
+    shear_range=0.1,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    width_shift_range=0.1,
+    height_shift_range=0.1
+)
+
+validation = ImageDataGenerator(
+    rescale=1./255
+)
+
+# Data generators
+trainingdata = training.flow_from_dataframe(
+    dataframe=train_df,
+    directory="/content/train",
+    x_col='filename',
+    y_col='category',
+    target_size=(224, 224),
+    class_mode='categorical',
+    batch_size=32
+)
+
+validationdata = validation.flow_from_dataframe(
+    dataframe=validate_df,
+    directory="/content/train",
+    x_col='filename',
+    y_col='category',
+    target_size=(224, 224),
+    class_mode='categorical',
+    batch_size=32
+)
+
+# Load VGG16
+base = VGG16(
+    include_top=False,
+    input_shape=(224, 224, 3),
+    weights='imagenet'
+)
+
+# Freeze layers
+base.trainable = False
+
+# Build model
+model = models.Sequential([
+    base,
+    layers.GlobalAveragePooling2D(),
+    layers.Dense(120, activation="relu"),
+    layers.Dense(2, activation="softmax")
+])
+
+# Compile model
+model.compile(
+    optimizer="adam",
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Train model
+history = model.fit(
+    trainingdata,
+    validation_data=validationdata,
+    epochs=10
+)
+
+# Evaluate
+loss, accuracy = model.evaluate(validationdata)
+
+print("Validation Accuracy:", accuracy)
