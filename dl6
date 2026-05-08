@@ -1,0 +1,52 @@
+import tensorflow as tf
+from tensorflow.keras import layers, models, datasets
+from tensorflow.keras.applications.vgg16 import VGG16
+
+# Load CIFAR-100
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar100.load_data()
+
+# Normalize
+train_images = train_images.astype("float32") / 255.0
+test_images = test_images.astype("float32") / 255.0
+
+# Resize images for VGG16
+train_images = tf.image.resize(train_images, (224, 224))
+test_images = tf.image.resize(test_images, (224, 224))
+
+# Load pretrained VGG16
+base = VGG16(
+    weights='imagenet',
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+
+# Freeze pretrained layers
+base.trainable = False
+
+# Build model
+model = models.Sequential([
+    base,
+    layers.Flatten(),
+    layers.Dense(1200, activation="relu"),
+    layers.Dense(100, activation="softmax")
+])
+
+# Compile
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+# Train
+history = model.fit(
+    train_images,
+    train_labels,
+    epochs=10,
+    validation_data=(test_images, test_labels)
+)
+
+# Evaluate
+loss, acc = model.evaluate(test_images, test_labels)
+
+print("Test Accuracy:", acc)
